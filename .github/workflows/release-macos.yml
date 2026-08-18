@@ -1,0 +1,78 @@
+name: Release macOS update
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: needle-macos-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.release.outputs.publish }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - id: release
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          FORCE_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node scripts/release-version-changed.mjs "$BEFORE_SHA" "$FORCE_RELEASE" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: macos-15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - name: Build, sign, and notarize Needle
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          npm run desktop:dmg-background
+          npm run desktop:native
+          npm run build
+          npx electron-builder --mac dmg zip --arm64 --publish never
+          node scripts/notarize-dmg.mjs
+          node scripts/prepare-release-metadata.mjs
+          node scripts/verify-mac-release.mjs
+      - name: Archive signed release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Needle-${{ needs.prepare.outputs.version }}-macOS
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.zip.blockmap
+            release/latest-mac.yml
+          if-no-files-found: error
+      - name: Publish release to Vercel Blob
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: node scripts/publish-mac-release.mjs

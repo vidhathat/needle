@@ -1,0 +1,174 @@
+{
+  "name": "needle-web",
+  "productName": "Needle",
+  "version": "0.2.2",
+  "description": "A tactile turntable for Apple Music, Spotify, and browser media on macOS.",
+  "author": "Needle",
+  "license": "MIT",
+  "homepage": "https://vinyl-mac.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vidhathat/needle.git"
+  },
+  "private": true,
+  "main": "desktop/main.mjs",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "desktop:native": "node-gyp rebuild --directory desktop/native --target=43.2.0 --dist-url=https://electronjs.org/headers && node scripts/build-media-adapter.mjs",
+    "desktop:dmg-background": "swift scripts/build-dmg-background.swift",
+    "desktop:dev": "npm run desktop:native && concurrently -k -s first -n web,desktop \"npm run dev\" \"wait-on http://localhost:3000 && NEEDLE_WEB_URL=http://localhost:3000 electron .\"",
+    "desktop:pack": "npm run desktop:native && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dir",
+    "desktop:dmg": "npm run desktop:dmg-background && npm run desktop:native && npm run build && electron-builder --mac dmg zip && node scripts/notarize-dmg.mjs && node scripts/prepare-release-metadata.mjs && node scripts/verify-mac-release.mjs",
+    "desktop:dmg:test": "npm run desktop:dmg-background && npm run desktop:native && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --arm64 -c.directories.output=release-test -c.mac.identity=- -c.mac.hardenedRuntime=false",
+    "companion": "node scripts/now-playing-companion.mjs",
+    "build": "vinext build",
+    "build:vercel": "npm run build && node scripts/build-vercel.mjs",
+    "start": "vinext start",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern release --ignore-pattern release-test --ignore-pattern vercel-output --ignore-pattern desktop/native/build"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@next/eslint-plugin-next": "16.2.6",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vercel/blob": "^2.8.0",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.34",
+    "concurrently": "10.0.4",
+    "electron": "43.2.0",
+    "electron-builder": "26.15.3",
+    "eslint": "9.39.4",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "16.4.0",
+    "js-yaml": "^5.2.3",
+    "node-gyp": "12.4.0",
+    "react-server-dom-webpack": "19.2.8",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.59.3",
+    "vinext": "1.0.0-beta.6",
+    "vite": "8.0.16",
+    "wait-on": "9.1.0"
+  },
+  "type": "module",
+  "build": {
+    "appId": "com.needle.player",
+    "productName": "Needle",
+    "asar": true,
+    "npmRebuild": false,
+    "afterPack": "scripts/after-pack.mjs",
+    "electronUpdaterCompatibility": ">=2.16",
+    "electronLanguages": [
+      "en"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "desktop/resources"
+    },
+    "files": [
+      "desktop/**/*",
+      "!desktop/native/build{,/**/*}",
+      "scripts/now-playing-companion.mjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "needle-dist",
+        "filter": [
+          "**/*",
+          "!client/audio/needle-demo.m4a"
+        ]
+      },
+      {
+        "from": "node_modules/react",
+        "to": "needle-dist/node_modules/react"
+      },
+      {
+        "from": "node_modules/react-dom",
+        "to": "needle-dist/node_modules/react-dom"
+      },
+      {
+        "from": "node_modules/scheduler",
+        "to": "needle-dist/node_modules/scheduler"
+      },
+      {
+        "from": "desktop/native/build/Release/needle_desktop_level.node",
+        "to": "native/needle_desktop_level.node"
+      },
+      {
+        "from": "desktop/native/build/Release/needle_media_remote",
+        "to": "native/needle_media_remote"
+      },
+      {
+        "from": "desktop/native/vendor/mediaremote-adapter/MediaRemoteAdapter.framework",
+        "to": "native/MediaRemoteAdapter.framework"
+      },
+      {
+        "from": "desktop/native/vendor/mediaremote-adapter/mediaremote-adapter.pl",
+        "to": "native/mediaremote-adapter.pl"
+      },
+      {
+        "from": "desktop/native/vendor/mediaremote-adapter/LICENSE",
+        "to": "licenses/MediaRemoteAdapter-LICENSE"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "desktop/resources/icon.png",
+      "minimumSystemVersion": "13.0",
+      "entitlements": "desktop/resources/entitlements.mac.plist",
+      "entitlementsInherit": "desktop/resources/entitlements.mac.inherit.plist",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "Needle reads the current track and adjusts volume in Apple Music or Spotify.",
+        "LSApplicationCategoryType": "public.app-category.music"
+      },
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://9rt8zr04msyyegmt.public.blob.vercel-storage.com/updates/mac"
+      }
+    ],
+    "dmg": {
+      "title": "Needle ${version}",
+      "artifactName": "Needle-${version}-${arch}.${ext}",
+      "format": "UDBZ",
+      "background": "dmg-background.png",
+      "iconSize": 112,
+      "iconTextSize": 13,
+      "contents": [
+        {
+          "x": 180,
+          "y": 250,
+          "type": "file"
+        },
+        {
+          "x": 540,
+          "y": 250,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "sign": true
+    },
+    "artifactName": "Needle-${version}-${arch}.${ext}"
+  }
+}
