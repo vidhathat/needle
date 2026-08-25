@@ -1,137 +1,130 @@
 # Needle
 
+A turntable that lives on your Mac desktop and plays whatever you're already playing.
+
+![Needle running as a live wallpaper on macOS, with the current album on the platter](docs/screenshots/needle-desktop.jpg)
+
+[Download for Mac](https://vinyl-mac.vercel.app/download/) ·
+[Try it in the browser](https://vinyl-mac.vercel.app/player/) ·
+[Website](https://vinyl-mac.vercel.app/)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
+[![Platform: macOS 13+](https://img.shields.io/badge/macOS-13%2B%20Apple%20silicon-black.svg)](https://vinyl-mac.vercel.app/download/)
 
-Needle is a macOS turntable wallpaper that follows Apple Music, Spotify, and
-browser media. It includes tactile playback controls, responsive multi-display
-wallpaper windows, daylight/evening scene lighting, and an event-driven local
-now-playing bridge. The website includes an original audio preview of the
-same interface.
+Needle sits behind your icons as a live wallpaper. Start a song in Apple Music, Spotify, or a
+browser tab, and the record drops, the tonearm swings in, and the label shows the real cover art.
+No account, no API key, no companion app to babysit.
 
-[Download the signed macOS build](https://vinyl-mac.vercel.app/download/) ·
-[Try the web preview](https://vinyl-mac.vercel.app)
+<!--
+More screenshots to add - drop the files in docs/screenshots/ and uncomment:
 
-## Run locally
+| Playback controls | Multi-display |
+| --- | --- |
+| ![](docs/screenshots/controls.png) | ![](docs/screenshots/displays.png) |
+
+![Needle following a track change](docs/screenshots/needle-demo.gif)
+-->
+
+## Features
+
+- **Follows what's already playing** - Apple Music, Spotify, YouTube Music, and any site that
+  publishes a macOS Now Playing session (SoundCloud, Bandcamp, podcast players, video sites).
+- **Real cover art** - starts from the artwork macOS gives it, then finds a sharper version and
+  checks it against the original before swapping.
+- **Tactile controls** - drag the tonearm off the record to pause, put it back to resume. The volume
+  knob drags, scrolls, and takes arrow keys, with quiet mechanical ticks you can turn off.
+- **True desktop wallpaper** - a click-through window behind Finder's icons, with its own wallpaper
+  window on every connected display.
+- **Scene lighting** - the room warms and cools with the time of day.
+- **Set and forget** - *Needle → Set as Default Wallpaper* keeps the wallpaper running after you
+  close the controls. Click the Dock icon to bring them back.
+- **Quiet by default** - no account, no analytics, no music-service login. Playback detection and
+  control stay on your Mac. See the [privacy policy](https://vinyl-mac.vercel.app/privacy/).
+- **Free and MIT-licensed**, with a web player you can try before downloading anything.
+
+## Install
+
+**Requirements:** Apple silicon Mac, macOS 13 Ventura or later.
+
+1. [Download Needle.dmg](https://vinyl-mac.vercel.app/download/).
+2. Open the DMG and drag **Needle** into Applications.
+3. Launch it. The wallpaper starts right away.
+4. The first time it reads a native music app, macOS asks for Automation permission - approve it.
+   You can change it later under *System Settings → Privacy & Security → Automation*.
+
+To stop the wallpaper completely, choose **Quit Needle**.
+
+Needle checks for updates shortly after launch and every six hours, and asks before downloading and
+again before installing. If you're on a build from before the updater shipped, install the latest DMG
+once by hand and updates take over from there.
+
+### Signing and notarization
+
+Every public release is built in CI, signed with an Apple Developer ID certificate, and **notarized
+by Apple**, so it opens without a Gatekeeper warning and without right-click → Open. If macOS ever
+warns you about a Needle build, you didn't get it from
+[vinyl-mac.vercel.app](https://vinyl-mac.vercel.app/) or the GitHub releases page - delete it.
+
+The app requests Automation access only, to control Apple Music or Spotify. It requests no camera,
+microphone, Bluetooth, or audio-capture access.
+
+## Privacy in one paragraph
+
+Needle has no server, no account, and no telemetry. Track title, artist, artwork, and playback state
+are read on your Mac and stay there. The only outbound requests are artwork lookups - title and
+artist sent to the public iTunes Search API, YouTube Music, and Spotify's oEmbed endpoint - and the
+update check. Audio and credentials are never sent anywhere. Full detail:
+[privacy policy](https://vinyl-mac.vercel.app/privacy/) · [terms](https://vinyl-mac.vercel.app/terms/).
+
+## Build from source
 
 ```bash
 npm install
-npm run dev
+npm run dev        # web renderer at http://localhost:3000
+npm run desktop:dev  # web renderer + native window together
 ```
 
-Open `http://localhost:3000`.
-
-## Run as a macOS app
-
-The desktop build embeds the music bridge, so there is no companion process to
-start. During development, launch the web renderer and native window together:
+The desktop build embeds the music bridge, so there is no companion process to start.
 
 ```bash
-npm run desktop:dev
-```
-
-On macOS 13 or later, Needle creates a click-through desktop window behind Finder's
-icons as soon as the app opens. A separate wallpaper window is maintained for
-every connected display. By default, closing the controls quits Needle and
-restores the normal desktop. Enable **Needle → Set as Default Wallpaper** to
-close the controls while leaving the wallpaper active; click Needle in the Dock
-to reopen them. Choosing **Quit Needle** always stops the wallpaper completely.
-
-Create an unpacked local application at `release/mac-arm64/Needle.app`:
-
-```bash
-npm run desktop:pack
+npm run desktop:pack   # unpacked app at release/mac-arm64/Needle.app
+npm run desktop:dmg    # distributable DMG
+npm run build          # web build
 ```
 
 The first native build downloads and checksum-verifies the pinned
-[`mediaremote-adapter`](https://github.com/ungive/mediaremote-adapter) source,
-then compiles it into the application. Needle bundles the adapter and its BSD
-3-Clause license; users do not install or run a separate companion.
+[`mediaremote-adapter`](https://github.com/ungive/mediaremote-adapter) source and compiles it in.
+Needle bundles the adapter and its BSD 3-Clause license.
 
-For a distributable DMG, run `npm run desktop:dmg`. Public downloads must be
-signed with a Developer ID certificate and notarized by Apple; the Electron
-Builder configuration already includes the Automation usage description and
-entitlements needed for Apple Music and Spotify control.
-
-## Release updates
-
-Needle checks for an update shortly after launch and every six hours while it
-is running. Users can also choose **Needle → Check for Updates…**. When an
-update is available, Needle asks before downloading it and asks again before
-restarting to install it.
-
-To publish a release, increase the stable semantic version in `package.json`
-and `package-lock.json`, then merge or push that change to `main` or `master`.
-The `release-macos.yml` workflow tests the app, signs and notarizes its DMG and
-ZIP, uploads the versioned artifacts to Vercel Blob, and publishes
-`latest-mac.yml` last so clients never see a partially uploaded release.
-
-The GitHub repository needs these Actions secrets:
-
-- `MAC_CSC_LINK` and `MAC_CSC_KEY_PASSWORD`
-- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`
-- `BLOB_READ_WRITE_TOKEN`
-
-Existing builds without the updater need one final manual DMG installation.
-Every signed release installed after that can receive later versions through
-the in-app update flow.
-
-## Use live music during web development
-
-In a second terminal, start the localhost-only companion:
+### Live music during web development
 
 ```bash
-npm run companion
+npm run companion   # localhost-only now-playing bridge
 ```
 
-Then play media on any website that appears in macOS Now Playing, Spotify, or
-Apple Music. Needle will switch from its demo records to the real title, artist,
-playback state, progress, and cover art. YouTube Music, SoundCloud, Bandcamp,
-podcast players, and video sites work when their browser publishes a media
-session. No Spotify, Google, or Apple API login is used. macOS may ask once for
-permission to control a native music application; approve it under **System
-Settings → Privacy & Security → Automation**.
+Then play something in Apple Music, Spotify, or a browser tab and the demo records are replaced by
+the real title, artist, playback state, progress, and cover art. The companion listens only on
+`127.0.0.1:43117` and accepts requests only from localhost origins; the packaged macOS app calls the
+bridge directly through isolated Electron IPC and never opens that port.
 
-The turntable volume knob controls Spotify or Apple Music directly. For browser
-media it controls the Mac's output volume, so it works consistently across
-sites. Drag it, scroll over it, or focus it and use the arrow keys. Its quiet tactile ticks use
-four bundled mechanical samples (with a Web Audio fallback) and can be disabled
-from the playback bar. The knob remains interactive in demo mode, so its motion
-and sound can be felt even when no music app is playing.
+## Releasing
 
-The tonearm is a playback control too: drag it away from the record to pause,
-or place it back over the grooves to resume. It controls the live Spotify,
-Apple Music, or browser media session when one is connected and the demo record
-otherwise.
+Bump the stable semantic version in `package.json` and `package-lock.json` and push to `main`. The
+`release-macos.yml` workflow tests, signs, and notarizes the DMG and ZIP, uploads the versioned
+artifacts to Vercel Blob, and publishes `latest-mac.yml` last so clients never see a half-uploaded
+release.
 
-The development companion listens only on `127.0.0.1:43117` and accepts
-requests only from localhost origins. The macOS application calls the same
-bridge directly through isolated Electron IPC and does not open that port.
+Required Actions secrets: `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, `BLOB_READ_WRITE_TOKEN`.
 
-## Privacy
+## Contributing
 
-Playback detection and control stay on the Mac. Needle first displays the
-artwork supplied by macOS, then may send the current track title and artist to
-YouTube Music and the iTunes Search API to find a sharper cover. It never sends
-audio or music-account credentials. Candidate artwork is compared locally with
-the macOS artwork before it replaces the initial image.
+Issues and pull requests are welcome - see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The macOS build requests Automation access only when it needs to control Apple
-Music or Spotify. It does not request camera, microphone, Bluetooth, or audio
-capture access.
+## Credits and license
 
-## Build
-
-```bash
-npm run build
-```
-
-The artwork in `public/artwork` was created specifically for Needle.
+Needle is MIT-licensed; see [LICENSE](LICENSE). The artwork in `public/artwork` was made for Needle.
 System-wide browser metadata on macOS 15.4 and later is read through
-`mediaremote-adapter`, copyright Jonas van den Berg and contributors, under the
-BSD 3-Clause License. Its license is included in packaged applications.
-
-## License
-
-Needle is open source under the [MIT License](LICENSE). Original demo and
-interface assets in this repository are covered by the same license. See
-[NOTICE.md](NOTICE.md) for third-party and trademark notices.
+[`mediaremote-adapter`](https://github.com/ungive/mediaremote-adapter), copyright Jonas van den Berg
+and contributors, BSD 3-Clause. Third-party and trademark notices are in [NOTICE.md](NOTICE.md).
+Not affiliated with Apple, Spotify, or Google.
