@@ -55,6 +55,20 @@ html[data-needle-mode="wallpaper"] [role="slider"] {
   pointer-events: none;
 }
 
+/* Chromium never makes hiddenInset windows draggable on its own; this strip covers the traffic-light row. */
+.titlebar-drag-region {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 40px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+html[data-needle-mode="controls"] .titlebar-drag-region {
+  pointer-events: auto;
+  -webkit-app-region: drag;
+}
+
 button,
 input {
   font: inherit;

@@ -645,6 +645,7 @@ export default function Home({ demoMode = "app" }: PlayerProps = {}) {
       style={style}
       onPointerMove={handlePointerMove}
     >
+      <div className="titlebar-drag-region" aria-hidden="true" />
       {isLandingDemo && track.audio ? (
         // Music-only demo; there is no spoken content to caption.
         // eslint-disable-next-line jsx-a11y/media-has-caption
