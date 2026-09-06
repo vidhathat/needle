@@ -175,8 +175,8 @@ test("lets users keep the wallpaper running after closing the controls", async (
   assert.match(main, /if \(isMac\) \{[\s\S]*?await syncWallpaperWindows\(\)/);
   assert.match(main, /Set as Default Wallpaper/);
   assert.match(main, /keepWallpaperRunningAfterClose = preferences\.keepWallpaperRunningAfterClose === true/);
-  assert.match(main, /mainWindow\.on\("closed", \(\) => \{[\s\S]*?if \(!isQuitting && !keepWallpaperRunningAfterClose\) app\.quit\(\)/);
-  assert.match(main, /app\.on\("window-all-closed", \(\) => \{[\s\S]*?if \(!isMac \|\| !keepWallpaperRunningAfterClose\) app\.quit\(\)/);
+  assert.match(main, /mainWindow\.on\("closed", \(\) => \{[\s\S]*?if \(!isQuitting && \(!keepWallpaperRunningAfterClose \|\| !wallpaperEnabled\)\) app\.quit\(\)/);
+  assert.match(main, /app\.on\("window-all-closed", \(\) => \{[\s\S]*?if \(!isMac \|\| !keepWallpaperRunningAfterClose \|\| !wallpaperEnabled\) app\.quit\(\)/);
   assert.match(main, /app\.on\("before-quit", \(\) => \{[\s\S]*?destroyWallpaperWindows\(\)/);
   assert.doesNotMatch(main, /\bTray\b|setLoginItemSettings|Show as Wallpaper|Show Wallpaper Only While Playing/);
 });
