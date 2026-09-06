@@ -37,6 +37,7 @@ let appServer = null;
 let appUrl = process.env.NEEDLE_WEB_URL ?? "";
 let isQuitting = false;
 let keepWallpaperRunningAfterClose = false;
+let wallpaperEnabled = true;
 let nowPlayingPromise = null;
 let lastNowPlaying = null;
 let lastNowPlayingAt = 0;
@@ -58,6 +59,7 @@ async function loadPreferences() {
   try {
     const preferences = JSON.parse(await readFile(preferencesPath(), "utf8"));
     keepWallpaperRunningAfterClose = preferences.keepWallpaperRunningAfterClose === true;
+    wallpaperEnabled = preferences.wallpaperEnabled !== false;
   } catch (error) {
     if (error?.code !== "ENOENT") console.error("Needle could not read its preferences:", error);
   }
@@ -68,7 +70,7 @@ async function savePreferences() {
   const destination = preferencesPath();
   const temporary = join(directory, "preferences.tmp");
   await mkdir(directory, { recursive: true });
-  await writeFile(temporary, JSON.stringify({ keepWallpaperRunningAfterClose }, null, 2), "utf8");
+  await writeFile(temporary, JSON.stringify({ keepWallpaperRunningAfterClose, wallpaperEnabled }, null, 2), "utf8");
   await rename(temporary, destination);
 }
 
@@ -80,6 +82,17 @@ async function setKeepWallpaperRunningAfterClose(enabled) {
     console.error("Needle could not save its preferences:", error);
   }
   installMenu();
+}
+
+async function setWallpaperEnabled(enabled) {
+  wallpaperEnabled = Boolean(enabled && isMac);
+  try {
+    await savePreferences();
+  } catch (error) {
+    console.error("Needle could not save its preferences:", error);
+  }
+  installMenu();
+  await syncWallpaperWindows();
 }
 
 function applyWallpaperLevel(window) {
@@ -129,6 +142,12 @@ function installMenu() {
           click: () => { void updateManager?.check(true); },
         },
         { type: "separator" },
+        {
+          label: "Enable Wallpaper",
+          type: "checkbox",
+          checked: wallpaperEnabled,
+          click: (item) => { void setWallpaperEnabled(item.checked); },
+        },
         {
           label: "Set as Default Wallpaper",
           type: "checkbox",
@@ -180,7 +199,7 @@ async function createControlWindow() {
   configureNavigation(mainWindow);
   mainWindow.on("closed", () => {
     mainWindow = null;
-    if (!isQuitting && !keepWallpaperRunningAfterClose) app.quit();
+    if (!isQuitting && (!keepWallpaperRunningAfterClose || !wallpaperEnabled)) app.quit();
   });
   await mainWindow.loadURL(pageUrl("controls"));
 }
@@ -228,6 +247,11 @@ async function createWallpaperWindow(display) {
 }
 
 async function syncWallpaperWindows() {
+  if (!wallpaperEnabled) {
+    destroyWallpaperWindows();
+    return;
+  }
+
   const displays = screen.getAllDisplays();
   const activeDisplayIds = new Set(displays.map((display) => display.id));
 
@@ -425,7 +449,7 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  if (!isMac || !keepWallpaperRunningAfterClose) app.quit();
+  if (!isMac || !keepWallpaperRunningAfterClose || !wallpaperEnabled) app.quit();
 });
 
 app.on("before-quit", () => {
